@@ -6,9 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate-images": "node scripts/generate-vocab-images.mjs",
+    "generate-audio": "ELEVENLABS_API_KEY=$(grep ELEVENLABS_API_KEY .env.local | cut -d= -f2) node scripts/generate-audio.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@base-ui/react": "^1.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
