@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Volume2, Pause, ImageOff, Play } from "lucide-react";
 import { VOCABULARY_DATA, getImagePath, type Entry, type Category } from "@/data/vocabulary";
+import ShareButtons from "@/components/ShareButtons";
 
 export default function KotobaTouchPage() {
   const [activeCategory, setActiveCategory] = useState<Category>(VOCABULARY_DATA[0]);
@@ -175,6 +176,9 @@ export default function KotobaTouchPage() {
           </div>
         </div>
       )}
+
+      {/* Share buttons */}
+      <ShareButtons />
 
       {/* Entry grid */}
       <div className="flex-1 px-4 pb-6">
