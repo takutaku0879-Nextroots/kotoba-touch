@@ -1,0 +1,24 @@
+{
+  "name": "ことばタッチ",
+  "short_name": "ことばタッチ",
+  "description": "タップすると赤ちゃん言葉と絵が表示されて声で読んでくれる幼児向けアプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#d580b8",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
