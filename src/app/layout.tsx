@@ -15,8 +15,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? "https://kotoba-touch.vercel.app"),
-  title: "ことばタッチ — 赤ちゃん言葉アプリ",
-  description: "タップすると赤ちゃん言葉と絵が表示されて声で読んでくれる幼児向けアプリ",
+  title: "ことばタッチ — 赤ちゃん言葉・幼児語を声で覚える無料アプリ",
+  description: "赤ちゃん言葉（幼児語）をタップひとつで絵と音声で確認できる無料の育児アプリ。まんま・ワンワン・ねんねなど100以上の言葉を収録。0歳・1歳・2歳の赤ちゃんと一緒に楽しく言葉を覚えよう。",
+  keywords: ["赤ちゃん言葉", "幼児語", "育児アプリ", "言葉 覚える", "0歳", "1歳", "2歳", "まんま", "ワンワン", "ねんね", "赤ちゃん 言葉 練習"],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -24,16 +25,16 @@ export const metadata: Metadata = {
     title: "ことばタッチ",
   },
   openGraph: {
-    title: "ことばタッチ — 赤ちゃん言葉アプリ",
-    description: "タップすると赤ちゃん言葉と絵が表示されて声で読んでくれる幼児向けアプリ",
+    title: "ことばタッチ — 赤ちゃん言葉・幼児語を声で覚える無料アプリ",
+    description: "赤ちゃん言葉をタップひとつで絵と音声で確認できる無料の育児アプリ。まんま・ワンワン・ねんねなど100以上の言葉を収録。",
     siteName: "ことばタッチ",
     locale: "ja_JP",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ことばタッチ — 赤ちゃん言葉アプリ",
-    description: "タップすると赤ちゃん言葉と絵が表示されて声で読んでくれる幼児向けアプリ",
+    title: "ことばタッチ — 赤ちゃん言葉・幼児語を声で覚える無料アプリ",
+    description: "赤ちゃん言葉をタップひとつで絵と音声で確認できる無料の育児アプリ。まんま・ワンワン・ねんねなど100以上の言葉を収録。",
   },
 };
 
