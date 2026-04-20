@@ -1,27 +1,62 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Share, PlusSquare } from "lucide-react";
+import { X } from "lucide-react";
 
-type Platform = "ios" | "android" | null;
+type BrowserType = "line" | "ios-safari" | "ios-chrome" | "android" | null;
 
-function detectPlatform(): Platform {
+function detectBrowser(): BrowserType {
   if (typeof navigator === "undefined") return null;
   const ua = navigator.userAgent;
-  if (/iphone|ipad|ipod/i.test(ua)) return "ios";
-  if (/android/i.test(ua)) return "android";
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  const isAndroid = /android/i.test(ua);
+
+  if (/line\//i.test(ua)) return "line";
+  if (isIOS && /crios/i.test(ua)) return "ios-chrome";
+  if (isIOS) return "ios-safari";
+  if (isAndroid) return "android";
   return null;
 }
 
 function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
 }
+
+const INSTRUCTIONS: Record<
+  Exclude<BrowserType, null>,
+  { steps: string[] }
+> = {
+  line: {
+    steps: [
+      "右上の「…」をタップ",
+      "「ブラウザで開く」を選択",
+      "開いたブラウザでホーム画面に追加できます",
+    ],
+  },
+  "ios-safari": {
+    steps: [
+      "下のツールバーの 共有ボタン（↑）をタップ",
+      "「ホーム画面に追加」を選択",
+      "「追加」をタップして完了",
+    ],
+  },
+  "ios-chrome": {
+    steps: [
+      "右下の「…」をタップ",
+      "「ホーム画面に追加」を選択",
+      "「追加」をタップして完了",
+    ],
+  },
+  android: { steps: [] },
+};
 
 export default function InstallPrompt() {
   const [show, setShow] = useState(false);
-  const [platform, setPlatform] = useState<Platform>(null);
+  const [browser, setBrowser] = useState<BrowserType>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -29,10 +64,10 @@ export default function InstallPrompt() {
     if (isStandalone()) return;
     if (sessionStorage.getItem("install-dismissed")) return;
 
-    const p = detectPlatform();
-    setPlatform(p);
+    const b = detectBrowser();
+    setBrowser(b);
 
-    if (p === "android") {
+    if (b === "android") {
       const handler = (e: Event) => {
         e.preventDefault();
         setDeferredPrompt(e);
@@ -42,9 +77,7 @@ export default function InstallPrompt() {
       return () => window.removeEventListener("beforeinstallprompt", handler);
     }
 
-    if (p === "ios") {
-      setShow(true);
-    }
+    if (b !== null) setShow(true);
   }, []);
 
   const handleInstall = async () => {
@@ -61,47 +94,29 @@ export default function InstallPrompt() {
     sessionStorage.setItem("install-dismissed", "1");
   };
 
-  if (!show) return null;
+  if (!show || !browser) return null;
+
+  const instruction = INSTRUCTIONS[browser];
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 p-4 animate-in slide-in-from-bottom duration-300">
       <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl border border-border p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl">👶</span>
+            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 text-2xl">
+              👶
             </div>
             <div>
-              <p className="font-semibold text-sm text-foreground">ホーム画面に追加</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                アプリとして使えるようになります
-              </p>
+              <p className="font-semibold text-sm text-foreground">ホーム画面に追加しよう</p>
+              <p className="text-xs text-muted-foreground mt-0.5">アプリとして使えます</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={dismiss}
-            className="text-muted-foreground hover:text-foreground p-1"
-          >
+          <button type="button" onClick={dismiss} className="text-muted-foreground p-1">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {platform === "ios" ? (
-          <div className="mt-3 bg-muted rounded-xl p-3">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              <span className="inline-flex items-center gap-1 align-middle">
-                <Share className="w-3.5 h-3.5 text-blue-500" />
-              </span>
-              {" "}共有ボタンをタップして
-              <span className="inline-flex items-center gap-1 align-middle mx-1">
-                <PlusSquare className="w-3.5 h-3.5" />
-                <span className="font-medium text-foreground">「ホーム画面に追加」</span>
-              </span>
-              を選んでください
-            </p>
-          </div>
-        ) : (
+        {browser === "android" ? (
           <button
             type="button"
             onClick={handleInstall}
@@ -109,6 +124,17 @@ export default function InstallPrompt() {
           >
             ホーム画面に追加する
           </button>
+        ) : (
+          <ol className="mt-3 bg-muted rounded-xl p-3 space-y-1.5">
+            {instruction.steps.map((step, i) => (
+              <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary font-bold text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  {i + 1}
+                </span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
         )}
       </div>
     </div>
