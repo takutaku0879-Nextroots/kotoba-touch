@@ -26,23 +26,24 @@ export default function KotobaTouchPage() {
     const staticUrl = `/vocab-audio/${encodeURIComponent(text)}.mp3`;
     const apiUrl = `/api/tts?text=${encodeURIComponent(text)}`;
 
-    const tryPlay = async (url: string) => {
-      const audio = new Audio(url);
-      currentAudio.current = audio;
-      audio.onended = () => setIsSpeaking(false);
-      audio.onerror = () => setIsSpeaking(false);
-      await audio.play();
-    };
-
-    try {
-      setIsSpeaking(true);
-      // HEAD リクエストで静的ファイルの存在確認
-      const check = await fetch(staticUrl, { method: "HEAD" });
-      if (check.ok) {
-        await tryPlay(staticUrl);
-      } else {
-        await tryPlay(apiUrl);
+    setIsSpeaking(true);
+    const audio = new Audio(staticUrl);
+    currentAudio.current = audio;
+    audio.onended = () => setIsSpeaking(false);
+    audio.onerror = async () => {
+      // 静的ファイルがなければAPIにフォールバック
+      try {
+        const fallback = new Audio(apiUrl);
+        currentAudio.current = fallback;
+        fallback.onended = () => setIsSpeaking(false);
+        fallback.onerror = () => setIsSpeaking(false);
+        await fallback.play();
+      } catch {
+        setIsSpeaking(false);
       }
+    };
+    try {
+      await audio.play();
     } catch {
       setIsSpeaking(false);
     }
