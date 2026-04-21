@@ -56,7 +56,8 @@ export default function KotobaTouchPage() {
       setImageLoaded(false);
       setImageError(false);
     }
-  }, [selectedEntry]);
+    speak(entry.babyWords[0]);
+  }, [selectedEntry, speak]);
 
   const handleCategorySelect = useCallback((category: Category) => {
     setActiveCategory(category);
