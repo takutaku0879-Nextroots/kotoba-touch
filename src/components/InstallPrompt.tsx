@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
-type BrowserType = "line" | "ios-safari" | "ios-chrome" | "android" | null;
+type BrowserType = "line" | "ios-safari" | "ios-chrome" | "ios-edge" | "android" | null;
 
 function detectBrowser(): BrowserType {
   if (typeof navigator === "undefined") return null;
@@ -12,6 +12,7 @@ function detectBrowser(): BrowserType {
   const isAndroid = /android/i.test(ua);
 
   if (/line\//i.test(ua)) return "line";
+  if (isIOS && /edgios|edga/i.test(ua)) return "ios-edge";
   if (isIOS && /crios/i.test(ua)) return "ios-chrome";
   if (isIOS) return "ios-safari";
   if (isAndroid) return "android";
@@ -30,6 +31,13 @@ const INSTRUCTIONS: Record<
   Exclude<BrowserType, null>,
   { steps: string[] }
 > = {
+  "ios-edge": {
+    steps: [
+      "右下の「三」をタップ",
+      "「共有」をタップ",
+      "「ホーム画面に追加」をタップして完了",
+    ],
+  },
   line: {
     steps: [
       "右下のアイコンをタップ",
