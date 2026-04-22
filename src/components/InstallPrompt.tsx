@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { usePostHog } from "posthog-js/react";
 
-type BrowserType = "line" | "ios-safari" | "ios-chrome" | "ios-edge" | "android" | null;
+type BrowserType = "line" | "twitter" | "ios-safari" | "ios-chrome" | "ios-edge" | "android" | null;
 
 function detectBrowser(): BrowserType {
   if (typeof navigator === "undefined") return null;
@@ -13,6 +13,7 @@ function detectBrowser(): BrowserType {
   const isAndroid = /android/i.test(ua);
 
   if (/line\//i.test(ua)) return "line";
+  if (/twitter/i.test(ua)) return "twitter";
   if (isIOS && /edgios|edga/i.test(ua)) return "ios-edge";
   if (isIOS && /crios/i.test(ua)) return "ios-chrome";
   if (isIOS) return "ios-safari";
@@ -28,40 +29,34 @@ function isStandalone(): boolean {
   );
 }
 
-const INSTRUCTIONS: Record<
-  Exclude<BrowserType, null>,
-  { steps: string[] }
-> = {
-  "ios-edge": {
-    steps: [
-      "右下の「三」をタップ",
-      "「共有」をタップ",
-      "「ホーム画面に追加」をタップして完了",
-    ],
-  },
-  line: {
-    steps: [
-      "右下のアイコンをタップ",
-      "「ブラウザで開く」を選択",
-      "開いたブラウザの右下「三」→「ホーム画面に追加」で完了",
-    ],
-  },
-  "ios-safari": {
-    steps: [
-      "下のツールバーの共有ボタン「↑」をタップ",
-      "「ホーム画面に追加」を選択",
-      "「追加」をタップして完了",
-    ],
-  },
-  "ios-chrome": {
-    steps: [
-      "右下の「三」をタップ",
-      "「ホーム画面に追加」を選択",
-      "「追加」をタップして完了",
-    ],
-  },
-  android: { steps: [] },
+// これらのブラウザはSafariへ誘導する
+const SAFARI_REDIRECT_BROWSERS: BrowserType[] = ["line", "twitter", "ios-chrome", "ios-edge"];
+
+const SAFARI_REDIRECT_STEPS: Record<string, string[]> = {
+  line: [
+    "右下の「…」アイコンをタップ",
+    "「ブラウザで開く」を選択",
+    "Safariが開いたら音声が使えます 🎵",
+  ],
+  twitter: [
+    "右下の「…」アイコンをタップ",
+    "「Safariで開く」を選択",
+  ],
+  "ios-chrome": [
+    "右上の「…」アイコンをタップ",
+    "「Safariで開く」を選択",
+  ],
+  "ios-edge": [
+    "右下の「…」アイコンをタップ",
+    "「Safariで開く」を選択",
+  ],
 };
+
+const PWA_INSTALL_STEPS = [
+  "下のツールバーの共有ボタン「↑」をタップ",
+  "「ホーム画面に追加」を選択",
+  "「追加」をタップして完了",
+];
 
 export default function InstallPrompt() {
   const posthog = usePostHog();
@@ -113,7 +108,7 @@ export default function InstallPrompt() {
 
   if (!show || !browser) return null;
 
-  const instruction = INSTRUCTIONS[browser];
+  const isSafariRedirect = SAFARI_REDIRECT_BROWSERS.includes(browser);
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-50 p-4 animate-in slide-in-from-bottom duration-300">
@@ -121,11 +116,20 @@ export default function InstallPrompt() {
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 text-2xl">
-              👶
+              {isSafariRedirect ? "🔊" : "👶"}
             </div>
             <div>
-              <p className="font-semibold text-sm text-foreground">ホーム画面に追加しよう</p>
-              <p className="text-xs text-muted-foreground mt-0.5">アプリとして使えます</p>
+              {isSafariRedirect ? (
+                <>
+                  <p className="font-semibold text-sm text-foreground">Safariで開くと音声が使えます</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">このブラウザでは音声が再生されない場合があります</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-sm text-foreground">ホーム画面に追加しよう</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">アプリとして使えます</p>
+                </>
+              )}
             </div>
           </div>
           <button type="button" onClick={dismiss} className="text-muted-foreground p-1">
@@ -143,7 +147,7 @@ export default function InstallPrompt() {
           </button>
         ) : (
           <ol className="mt-3 bg-muted rounded-xl p-3 space-y-1.5">
-            {instruction.steps.map((step, i) => (
+            {(isSafariRedirect ? SAFARI_REDIRECT_STEPS[browser] ?? [] : PWA_INSTALL_STEPS).map((step, i) => (
               <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
                 <span className="w-4 h-4 rounded-full bg-primary/20 text-primary font-bold text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
                   {i + 1}
@@ -151,6 +155,12 @@ export default function InstallPrompt() {
                 <span>{step}</span>
               </li>
             ))}
+            {isSafariRedirect && (
+              <li className="flex items-start gap-2 text-xs text-primary font-medium mt-1 pt-1 border-t border-border">
+                <span className="text-base leading-none">💡</span>
+                <span>Safariで開いた後は「ホーム画面に追加」でアプリとして使えます</span>
+              </li>
+            )}
           </ol>
         )}
       </div>
