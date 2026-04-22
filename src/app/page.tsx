@@ -4,8 +4,10 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Volume2, Pause, ImageOff, Play } from "lucide-react";
 import { VOCABULARY_DATA, getImagePath, type Entry, type Category } from "@/data/vocabulary";
 import ShareButtons from "@/components/ShareButtons";
+import { usePostHog } from "posthog-js/react";
 
 export default function KotobaTouchPage() {
+  const posthog = usePostHog();
   const [activeCategory, setActiveCategory] = useState<Category>(VOCABULARY_DATA[0]);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -56,15 +58,26 @@ export default function KotobaTouchPage() {
       setImageLoaded(false);
       setImageError(false);
     }
+    posthog.capture("word_tapped", {
+      word_id: entry.id,
+      word_ja: entry.displayJa,
+      baby_word: entry.babyWords[0],
+      category_id: activeCategory.id,
+      category_name: activeCategory.nameJa,
+    });
     speak(entry.babyWords[0]);
-  }, [selectedEntry, speak]);
+  }, [selectedEntry, speak, posthog, activeCategory]);
 
   const handleCategorySelect = useCallback((category: Category) => {
     setActiveCategory(category);
     setSelectedEntry(null);
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
-  }, []);
+    posthog.capture("category_changed", {
+      category_id: category.id,
+      category_name: category.nameJa,
+    });
+  }, [posthog]);
 
   useEffect(() => {
     if (selectedEntry) {
@@ -109,8 +122,8 @@ export default function KotobaTouchPage() {
         <div ref={detailRef} className="mx-4 mb-3 float-in">
           <button
             type="button"
-            onClick={() => speak(primaryBabyWord)}
-            onTouchEnd={(e) => { e.preventDefault(); speak(primaryBabyWord); }}
+            onClick={() => { posthog.capture("audio_replayed", { word_id: selectedEntry.id, word_ja: selectedEntry.displayJa, baby_word: primaryBabyWord, source: "panel" }); speak(primaryBabyWord); }}
+            onTouchEnd={(e) => { e.preventDefault(); posthog.capture("audio_replayed", { word_id: selectedEntry.id, word_ja: selectedEntry.displayJa, baby_word: primaryBabyWord, source: "panel" }); speak(primaryBabyWord); }}
             className={`relative w-full rounded-2xl overflow-hidden shadow-md active:scale-[0.98] transition-all ${
               isSpeaking ? "ring-2 ring-primary" : ""
             }`}
@@ -166,8 +179,8 @@ export default function KotobaTouchPage() {
               <button
                 key={word}
                 type="button"
-                onClick={() => speak(word)}
-                onTouchEnd={(e) => { e.preventDefault(); speak(word); }}
+                onClick={() => { posthog.capture("baby_word_tapped", { word_id: selectedEntry.id, word_ja: selectedEntry.displayJa, baby_word: word }); speak(word); }}
+                onTouchEnd={(e) => { e.preventDefault(); posthog.capture("baby_word_tapped", { word_id: selectedEntry.id, word_ja: selectedEntry.displayJa, baby_word: word }); speak(word); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium active:scale-95 transition-all hover:bg-primary/20"
               >
                 <Volume2 className="w-3.5 h-3.5" />

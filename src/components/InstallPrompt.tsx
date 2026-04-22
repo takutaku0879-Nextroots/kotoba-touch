@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { usePostHog } from "posthog-js/react";
 
 type BrowserType = "line" | "ios-safari" | "ios-chrome" | "ios-edge" | "android" | null;
 
@@ -63,6 +64,7 @@ const INSTRUCTIONS: Record<
 };
 
 export default function InstallPrompt() {
+  const posthog = usePostHog();
   const [show, setShow] = useState(false);
   const [browser, setBrowser] = useState<BrowserType>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,24 +82,31 @@ export default function InstallPrompt() {
         e.preventDefault();
         setDeferredPrompt(e);
         setShow(true);
+        posthog.capture("install_prompt_shown", { browser_type: b });
       };
       window.addEventListener("beforeinstallprompt", handler);
       return () => window.removeEventListener("beforeinstallprompt", handler);
     }
 
-    if (b !== null) setShow(true);
-  }, []);
+    if (b !== null) {
+      setShow(true);
+      posthog.capture("install_prompt_shown", { browser_type: b });
+    }
+  }, [posthog]);
 
   const handleInstall = async () => {
+    posthog.capture("install_button_clicked", { browser_type: browser });
     if (deferredPrompt) {
       deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
+      const { outcome } = await deferredPrompt.userChoice;
+      posthog.capture("install_native_result", { browser_type: browser, outcome });
       setDeferredPrompt(null);
     }
     dismiss();
   };
 
   const dismiss = () => {
+    posthog.capture("install_prompt_dismissed", { browser_type: browser });
     setShow(false);
     sessionStorage.setItem("install-dismissed", "1");
   };
