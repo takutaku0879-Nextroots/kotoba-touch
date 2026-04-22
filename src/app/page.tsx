@@ -92,7 +92,7 @@ export default function KotobaTouchPage() {
     <main className="min-h-dvh flex flex-col max-w-md mx-auto">
 
       {/* Header */}
-      <div className="px-4 pt-6 pb-3 text-center">
+      <div className="px-4 pt-14 pb-3 text-center">
         <h1 className="text-xl font-bold text-primary tracking-tight">ことばタッチ</h1>
         <p className="text-xs text-muted-foreground mt-0.5">赤ちゃん言葉を覚えよう</p>
       </div>

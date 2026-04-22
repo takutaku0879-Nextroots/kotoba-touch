@@ -29,7 +29,6 @@ function isStandalone(): boolean {
   );
 }
 
-// これらのブラウザはSafariへ誘導する
 const SAFARI_REDIRECT_BROWSERS: BrowserType[] = ["line", "twitter", "ios-chrome", "ios-edge"];
 
 const SAFARI_REDIRECT_STEPS: Record<string, string[]> = {
@@ -60,14 +59,13 @@ const PWA_INSTALL_STEPS = [
 
 export default function InstallPrompt() {
   const posthog = usePostHog();
-  const [show, setShow] = useState(false);
   const [browser, setBrowser] = useState<BrowserType>(null);
+  const [showSheet, setShowSheet] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     if (isStandalone()) return;
-    if (sessionStorage.getItem("install-dismissed")) return;
 
     const b = detectBrowser();
     setBrowser(b);
@@ -76,94 +74,102 @@ export default function InstallPrompt() {
       const handler = (e: Event) => {
         e.preventDefault();
         setDeferredPrompt(e);
-        setShow(true);
-        posthog.capture("install_prompt_shown", { browser_type: b });
       };
       window.addEventListener("beforeinstallprompt", handler);
       return () => window.removeEventListener("beforeinstallprompt", handler);
     }
+  }, []);
 
-    if (b !== null) {
-      setShow(true);
-      posthog.capture("install_prompt_shown", { browser_type: b });
-    }
-  }, [posthog]);
-
-  const handleInstall = async () => {
-    posthog.capture("install_button_clicked", { browser_type: browser });
-    if (deferredPrompt) {
+  const handleBannerClick = () => {
+    posthog.capture("install_prompt_shown", { browser_type: browser });
+    if (browser === "android" && deferredPrompt) {
       deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      posthog.capture("install_native_result", { browser_type: browser, outcome });
-      setDeferredPrompt(null);
+      deferredPrompt.userChoice.then(({ outcome }: { outcome: string }) => {
+        posthog.capture("install_native_result", { browser_type: browser, outcome });
+        setDeferredPrompt(null);
+      });
+    } else {
+      setShowSheet(true);
     }
-    dismiss();
   };
 
-  const dismiss = () => {
+  const closeSheet = () => {
     posthog.capture("install_prompt_dismissed", { browser_type: browser });
-    setShow(false);
-    sessionStorage.setItem("install-dismissed", "1");
+    setShowSheet(false);
   };
 
-  if (!show || !browser) return null;
+  if (!browser) return null;
 
   const isSafariRedirect = SAFARI_REDIRECT_BROWSERS.includes(browser);
+  const steps = isSafariRedirect
+    ? SAFARI_REDIRECT_STEPS[browser] ?? []
+    : PWA_INSTALL_STEPS;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 p-4 animate-in slide-in-from-bottom duration-300">
-      <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl border border-border p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 text-2xl">
-              {isSafariRedirect ? "🔊" : "👶"}
-            </div>
-            <div>
-              {isSafariRedirect ? (
-                <>
-                  <p className="font-semibold text-sm text-foreground">Safariで開くと音声が使えます</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">このブラウザでは音声が再生されない場合があります</p>
-                </>
-              ) : (
-                <>
-                  <p className="font-semibold text-sm text-foreground">ホーム画面に追加しよう</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">アプリとして使えます</p>
-                </>
-              )}
-            </div>
-          </div>
-          <button type="button" onClick={dismiss} className="text-muted-foreground p-1">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {browser === "android" ? (
-          <button
-            type="button"
-            onClick={handleInstall}
-            className="mt-3 w-full bg-primary text-white rounded-xl py-2.5 text-sm font-medium active:scale-95 transition-all"
-          >
-            ホーム画面に追加する
-          </button>
-        ) : (
-          <ol className="mt-3 bg-muted rounded-xl p-3 space-y-1.5">
-            {(isSafariRedirect ? SAFARI_REDIRECT_STEPS[browser] ?? [] : PWA_INSTALL_STEPS).map((step, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                <span className="w-4 h-4 rounded-full bg-primary/20 text-primary font-bold text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {i + 1}
-                </span>
-                <span>{step}</span>
-              </li>
-            ))}
-            {isSafariRedirect && (
-              <li className="flex items-start gap-2 text-xs text-primary font-medium mt-1 pt-1 border-t border-border">
-                <span className="text-base leading-none">💡</span>
-                <span>Safariで開いた後は「ホーム画面に追加」でアプリとして使えます</span>
-              </li>
-            )}
-          </ol>
-        )}
+    <>
+      {/* 固定トップバナー */}
+      <div className="fixed top-0 inset-x-0 z-40 flex justify-center">
+        <button
+          type="button"
+          onClick={handleBannerClick}
+          className="w-full max-w-md bg-primary text-white text-xs font-medium py-2 px-4 flex items-center justify-center gap-1.5 active:opacity-80 transition-opacity"
+        >
+          <span>📲</span>
+          <span>ホーム画面にアプリ追加</span>
+        </button>
       </div>
-    </div>
+
+      {/* インストール手順シート */}
+      {showSheet && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={closeSheet}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full max-w-md bg-white rounded-t-2xl p-5 animate-in slide-in-from-bottom duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 text-2xl">
+                  {isSafariRedirect ? "🔊" : "👶"}
+                </div>
+                <div>
+                  {isSafariRedirect ? (
+                    <>
+                      <p className="font-semibold text-sm text-foreground">Safariで開くと音声が使えます</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">このブラウザでは音声が再生されない場合があります</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold text-sm text-foreground">ホーム画面に追加しよう</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">アプリとして使えます</p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <button type="button" onClick={closeSheet} className="text-muted-foreground p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <ol className="bg-muted rounded-xl p-3 space-y-1.5">
+              {steps.map((step, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <span className="w-4 h-4 rounded-full bg-primary/20 text-primary font-bold text-[10px] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  <span>{step}</span>
+                </li>
+              ))}
+              {isSafariRedirect && (
+                <li className="flex items-start gap-2 text-xs text-primary font-medium mt-1 pt-1 border-t border-border">
+                  <span className="text-base leading-none">💡</span>
+                  <span>Safariで開いた後は「ホーム画面に追加」でアプリとして使えます</span>
+                </li>
+              )}
+            </ol>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
