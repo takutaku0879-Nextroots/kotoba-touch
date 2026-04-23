@@ -11,6 +11,20 @@ export default function PostHogProvider({ children }: { children: React.ReactNod
       person_profiles: "identified_only",
       capture_pageview: true,
     });
+
+    // 滞在時間トラッキング
+    const startTime = Date.now();
+    const handleEnd = () => {
+      const duration_seconds = Math.round((Date.now() - startTime) / 1000);
+      posthog.capture("session_ended", { duration_seconds });
+    };
+    window.addEventListener("beforeunload", handleEnd);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") handleEnd();
+    });
+    return () => {
+      window.removeEventListener("beforeunload", handleEnd);
+    };
   }, []);
 
   return <PHProvider client={posthog}>{children}</PHProvider>;
